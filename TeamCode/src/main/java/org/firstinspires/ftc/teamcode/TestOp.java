@@ -16,6 +16,6 @@ public class TestOp extends OpMode {
     }
 
     public void loop() {
-        
+
     }
 }
