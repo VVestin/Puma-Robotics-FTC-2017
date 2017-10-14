@@ -3,8 +3,10 @@ package org.firstinspires.ftc.teamcode;
 import com.qualcomm.hardware.bosch.BNO055IMU;
 import com.qualcomm.robotcore.eventloop.opmode.OpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
+import com.qualcomm.robotcore.hardware.CRServo;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorSimple;
+import com.qualcomm.robotcore.hardware.Servo;
 
 import org.firstinspires.ftc.robotcore.external.navigation.Acceleration;
 import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
@@ -15,7 +17,7 @@ import org.firstinspires.ftc.robotcore.external.navigation.Orientation;
 /**
  * Created by vvestin on 9/23/17.
  */
-@TeleOp(name="BasicTeleOp",group="Motor")
+@TeleOp(name="BasicTeleOp",group="D")
 public class BasicTeleOp extends OpMode {
 
     private DcMotor motor1;
@@ -23,9 +25,14 @@ public class BasicTeleOp extends OpMode {
     private DcMotor motor3;
     private DcMotor motor4;
 
-    BNO055IMU imu;
-    Orientation angles;
-    Acceleration gravity;
+    private Servo s1; // TODO give these more meaningful identifiers
+    private Servo s2;
+    private CRServo cr1;
+    private CRServo cr2;
+
+    private OrientationSensor orientationSensor;
+
+    private double pos = 0.5;
 
     @Override
     public void init() {
@@ -36,14 +43,19 @@ public class BasicTeleOp extends OpMode {
 
         motor2.setDirection(DcMotorSimple.Direction.REVERSE);
         motor3.setDirection(DcMotorSimple.Direction.REVERSE);
+
+        s1 = hardwareMap.servo.get("s1");
+        s2 = hardwareMap.servo.get("s2");
+
+        cr1=hardwareMap.crservo.get("cr1");
+        cr2=hardwareMap.crservo.get("cr2");
+
+        orientationSensor = new OrientationSensor(hardwareMap);
     }
 
     @Override
     public void loop() {
-        angles   = imu.getAngularOrientation(AxesReference.INTRINSIC, AxesOrder.ZYX, AngleUnit.DEGREES);
-        gravity  = imu.getGravity();
-
-        telemetry.addData("Heading",angles.firstAngle);
+        double heading = orientationSensor.getOrientation();
 
         motor1.setPower(0);
         motor2.setPower(0);
@@ -63,19 +75,45 @@ public class BasicTeleOp extends OpMode {
             motor4.setPower(-1*gamepad1.right_trigger);
             return;
         }
-
+        // Equations:
+        // x'=xcos0+ysin0
+        // y'=-xsin0+ycos0
         double x = gamepad1.right_stick_x;
         double y = gamepad1.right_stick_y;
-        double newx = x*Math.cos(angle);
-        double m;
-        double n;
+        x =  x * Math.cos(Math.toRadians(heading)) + y * Math.sin(Math.toRadians(heading));
+        y = -x * Math.sin(Math.toRadians(heading)) + y * Math.cos(Math.toRadians(heading));
         if (x != 0 || y != 0) {
-            n = ((x + y)/2.0)*angles.firstAngle;
-            m = -((x - y)/2.0)*angles.firstAngle;
+            double n =  ((x + y) / 2.0); // n is the power of the motors in the +x +y direction
+            double m = -((x - y) / 2.0); // m is the power of the motors in the +x -y direction
             motor1.setPower(m);
             motor2.setPower(n);
             motor3.setPower(m);
             motor4.setPower(n);
+        }
+        if(gamepad1.a) {
+           pos -= .01;
+        }
+        if(gamepad1.b) {
+            pos += .01;
+        }
+
+        s1.setPosition(pos);
+        s2.setPosition(1 - pos);
+
+        cr1.setPower(0);
+        cr2.setPower(0);
+
+        if(gamepad1.dpad_up){
+            cr1.setPower(-1);
+            cr2.setPower(1);
+        }
+        if(gamepad1.dpad_down) {
+            cr2.setPower(-1);
+            cr1.setPower(1);
+        }
+        if(gamepad1.x){
+            cr1.setPower(0);
+            cr2.setPower(0);
         }
     }
 }
