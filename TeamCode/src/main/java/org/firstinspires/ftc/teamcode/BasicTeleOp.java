@@ -41,8 +41,8 @@ public class BasicTeleOp extends OpMode {
         motor3 = hardwareMap.dcMotor.get("w3");
         motor4 = hardwareMap.dcMotor.get("w4");
 
+        motor1.setDirection(DcMotorSimple.Direction.REVERSE);
         motor2.setDirection(DcMotorSimple.Direction.REVERSE);
-        motor3.setDirection(DcMotorSimple.Direction.REVERSE);
 
         s1 = hardwareMap.servo.get("s1");
         s2 = hardwareMap.servo.get("s2");
@@ -51,6 +51,7 @@ public class BasicTeleOp extends OpMode {
         cr2=hardwareMap.crservo.get("cr2");
 
         orientationSensor = new OrientationSensor(hardwareMap);
+
     }
 
     @Override
@@ -62,36 +63,36 @@ public class BasicTeleOp extends OpMode {
         motor3.setPower(0);
         motor4.setPower(0);
         if (gamepad1.left_trigger > 0.05) {
-            motor1.setPower(gamepad1.left_trigger);
-            motor2.setPower(-1*gamepad1.left_trigger);
-            motor3.setPower(-1*gamepad1.left_trigger);
+            motor1.setPower(-gamepad1.left_trigger);
+            motor2.setPower(-gamepad1.left_trigger);
+            motor3.setPower(gamepad1.left_trigger);
             motor4.setPower(gamepad1.left_trigger);
             return;
         }
         if (gamepad1.right_trigger > 0.05) {
-            motor1.setPower(-1*gamepad1.right_trigger);
+            motor1.setPower(gamepad1.right_trigger);
             motor2.setPower(gamepad1.right_trigger);
-            motor3.setPower(gamepad1.right_trigger);
-            motor4.setPower(-1*gamepad1.right_trigger);
+            motor3.setPower(-gamepad1.right_trigger);
+            motor4.setPower(-gamepad1.right_trigger);
             return;
         }
-        // Equations:
-        // x'=xcos0+ysin0
-        // y'=-xsin0+ycos0
-        double x = gamepad1.right_stick_x;
-        double y = gamepad1.right_stick_y;
-        x =  x * Math.cos(Math.toRadians(heading)) + y * Math.sin(Math.toRadians(heading));
-        y = -x * Math.sin(Math.toRadians(heading)) + y * Math.cos(Math.toRadians(heading));
+       // Equations:
+       // x'=xcos0+ysin0
+       // y'=-xsin0+ycos0
+        double rawx = gamepad1.right_stick_x;
+        double rawy = gamepad1.right_stick_y;
+        double x = rawx * Math.cos(Math.toRadians(-heading)) - rawy * Math.sin(Math.toRadians(-heading));
+        double y = rawx * Math.sin(Math.toRadians(-heading)) + rawy * Math.cos(Math.toRadians(-heading));
         if (x != 0 || y != 0) {
-            double n =  ((x + y) / 2.0); // n is the power of the motors in the +x +y direction
+            double n = ((x + y) / 2.0); // n is the power of the motors in the +x +y direction
             double m = -((x - y) / 2.0); // m is the power of the motors in the +x -y direction
             motor1.setPower(m);
             motor2.setPower(n);
             motor3.setPower(m);
             motor4.setPower(n);
         }
-        if(gamepad1.a) {
-           pos -= .01;
+        if (gamepad1.a) {
+            pos -= .01;
         }
         if(gamepad1.b) {
             pos += .01;
@@ -115,5 +116,7 @@ public class BasicTeleOp extends OpMode {
             cr1.setPower(0);
             cr2.setPower(0);
         }
+        telemetry.addData("heading is: ", heading);
+        telemetry.addData("position is: ", pos);
     }
 }
