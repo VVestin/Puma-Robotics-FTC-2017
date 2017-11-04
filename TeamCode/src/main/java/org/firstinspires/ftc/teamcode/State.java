@@ -5,6 +5,5 @@ package org.firstinspires.ftc.teamcode;
  */
 
 public enum State {
-    COLUMN_COUNTING, STOP;
-
+    COLUMN_COUNTING, STOP, START, TOP_FIELD, BOTTOM_FIELD
 }

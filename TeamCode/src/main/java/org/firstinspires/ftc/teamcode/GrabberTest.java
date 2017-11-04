@@ -33,10 +33,10 @@ public class GrabberTest extends OpMode {
         s1.setPosition(pos);
         s2.setPosition(1 - pos);
         if(gamepad1.dpad_up){
-            lifter.setPower(.5);
+            lifter.setPower(1);
         }
         if(gamepad1.dpad_down){
-            lifter.setPower(-.5);
+            lifter.setPower(-1);
         }
     }
 }

@@ -25,10 +25,9 @@ public class BasicTeleOp extends OpMode {
     private DcMotor motor3;
     private DcMotor motor4;
 
-    private Servo s1; // TODO give these more meaningful identifiers
+    private DcMotor lifter;
+    private Servo s1;
     private Servo s2;
-    private CRServo cr1;
-    private CRServo cr2;
 
     private OrientationSensor orientationSensor;
 
@@ -41,14 +40,17 @@ public class BasicTeleOp extends OpMode {
         motor3 = hardwareMap.dcMotor.get("w3");
         motor4 = hardwareMap.dcMotor.get("w4");
 
+        lifter=hardwareMap.dcMotor.get("lift");
+
+        s1 = hardwareMap.servo.get("s1");
+        s2 = hardwareMap.servo.get("s2");
+
+
         motor1.setDirection(DcMotorSimple.Direction.REVERSE);
         motor2.setDirection(DcMotorSimple.Direction.REVERSE);
 
         s1 = hardwareMap.servo.get("s1");
         s2 = hardwareMap.servo.get("s2");
-
-        cr1=hardwareMap.crservo.get("cr1");
-        cr2=hardwareMap.crservo.get("cr2");
 
         orientationSensor = new OrientationSensor(hardwareMap);
 
@@ -57,6 +59,22 @@ public class BasicTeleOp extends OpMode {
     @Override
     public void loop() {
         double heading = orientationSensor.getOrientation();
+        if (gamepad1.a) {
+            pos -= .01;
+        }
+        if(gamepad1.b) {
+            pos += .01;
+        }
+        s1.setPosition(pos);
+        s2.setPosition(1 - pos);
+
+        lifter.setPower(0);
+        if(gamepad1.dpad_up){
+            lifter.setPower(.5);
+        }
+        if(gamepad1.dpad_down){
+            lifter.setPower(-.5);
+        }
 
         motor1.setPower(0);
         motor2.setPower(0);
@@ -91,6 +109,8 @@ public class BasicTeleOp extends OpMode {
             motor3.setPower(m);
             motor4.setPower(n);
         }
+
+        lifter.setPower(0);
         if (gamepad1.a) {
             pos -= .01;
         }
@@ -100,22 +120,13 @@ public class BasicTeleOp extends OpMode {
 
         s1.setPosition(pos);
         s2.setPosition(1 - pos);
-
-        cr1.setPower(0);
-        cr2.setPower(0);
-
         if(gamepad1.dpad_up){
-            cr1.setPower(-1);
-            cr2.setPower(1);
+            lifter.setPower(.5);
         }
-        if(gamepad1.dpad_down) {
-            cr2.setPower(-1);
-            cr1.setPower(1);
+        if(gamepad1.dpad_down){
+            lifter.setPower(-.5);
         }
-        if(gamepad1.x){
-            cr1.setPower(0);
-            cr2.setPower(0);
-        }
+
         telemetry.addData("heading is: ", heading);
         telemetry.addData("position is: ", pos);
     }
