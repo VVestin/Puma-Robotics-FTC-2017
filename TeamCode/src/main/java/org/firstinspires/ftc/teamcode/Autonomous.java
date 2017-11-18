@@ -5,6 +5,7 @@ import com.qualcomm.hardware.modernrobotics.ModernRoboticsI2cRangeSensor;
 import com.qualcomm.robotcore.eventloop.opmode.OpMode;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorSimple;
+import com.qualcomm.robotcore.hardware.HardwareMap;
 
 import org.firstinspires.ftc.robotcore.external.ClassFactory;
 import org.firstinspires.ftc.robotcore.external.matrices.OpenGLMatrix;
@@ -29,14 +30,7 @@ import org.firstinspires.ftc.robotcore.external.navigation.VuforiaTrackables;
 
 public class Autonomous extends OpMode {
 
-    public static final String TAG = "Vuforia VuMark Sample";
-    public static final String VUFORIA_KEY = "AdrNx7L/////AAAAGWscSRJwJ0For7OwbugY3Fd0I3f+mAuH+BAHpz7UBuNJnU+QudRFM8gzxBh+mZcuiwi2TStZTxHuDQvVJHER5zuUmh7X6dr/7uEnPy+OBd72HjBc2gM+w7DNmcBhY8SmEgLRlzhI4dRCAmjADeVQd9c/vTTyqWSYdy7F2fE2eQbSoXKyKN1uFV6P6lN3NlHSazLOaniTLpAQQlbOwb9S2KxXy7PQK1ZBAmWMdHb5jwAXaqz+HXMPBez6/7behYzk1eu4a/0hFZ6jWo9Khoc9MRrhmCac0SCzmNRjfD8Y9Q61EtWvmo+WlbyzFJUNsZbND80BXAKaOWXvCAsdCo58qGtmVr36Bau5iljOe5HBbvov";
-    OpenGLMatrix lastLocation = null;
-
-    VuforiaLocalizer vuforia;
-    VuforiaTrackable relicTemplate;
-    VuforiaTrackables relicTrackables;
-    RelicRecoveryVuMark vuMark;
+    private VuforiaHelper vuforia;
 
     private DcMotor motor1;
     private DcMotor motor2;
@@ -45,7 +39,7 @@ public class Autonomous extends OpMode {
 
     private State state;
 
-    private int keyColumn = 1;
+    private int keyColumn;
     int objectCount;
     boolean seeColumn = false;
 
@@ -58,8 +52,8 @@ public class Autonomous extends OpMode {
     private OrientationSensor orientationSensor;
     private OrientationSensor orientationSensor2;
 
-    public void start() {
-        relicTrackables.activate();
+    public void start () {
+        vuforia.start();
     }
 
     public void init() {
@@ -76,62 +70,21 @@ public class Autonomous extends OpMode {
         orientationSensor = new OrientationSensor(hardwareMap);
         orientationSensor2 = new OrientationSensor(hardwareMap);
 
+        vuforia = new VuforiaHelper(hardwareMap);
+
         state = State.START;
-
-        int cameraMonitorViewId = hardwareMap.appContext.getResources().getIdentifier("cameraMonitorViewId", "id", hardwareMap.appContext.getPackageName());
-        VuforiaLocalizer.Parameters parameters = new VuforiaLocalizer.Parameters(cameraMonitorViewId);
-
-        parameters.cameraDirection = VuforiaLocalizer.CameraDirection.BACK;
-        parameters.vuforiaLicenseKey=VUFORIA_KEY;
-        this.vuforia = ClassFactory.createVuforiaLocalizer(parameters);
-
-        relicTrackables = this.vuforia.loadTrackablesFromAsset("RelicVuMark");
-        relicTemplate = relicTrackables.get(0);
-        relicTemplate.setName("relicVuMarkTemplate");
-
-        telemetry.addData(">", "Press Play to start");
-        telemetry.update();
     }
 
     public void loop() {
 
-            /**
-             * See if any of the instances of {@link relicTemplate} are currently visible.
-             * {@link RelicRecoveryVuMark} is an enum which can have the following values:
-             * UNKNOWN, LEFT, CENTER, and RIGHT. When a VuMark is visible, something other than
-             * UNKNOWN will be returned by {@link RelicRecoveryVuMark#from(VuforiaTrackable)}.
-             */
-            vuMark = RelicRecoveryVuMark.from(relicTemplate);
-            if (vuMark != RelicRecoveryVuMark.UNKNOWN) {
-
-                telemetry.addData("VuMark", "%s visible", vuMark);
-
-                OpenGLMatrix pose = ((VuforiaTrackableDefaultListener)relicTemplate.getListener()).getPose();
-                telemetry.addData("Pose", format(pose));
-
-                if (pose != null) {
-                    VectorF trans = pose.getTranslation();
-                    Orientation rot = Orientation.getOrientation(pose, AxesReference.EXTRINSIC, AxesOrder.XYZ, AngleUnit.DEGREES);
-
-                    double tX = trans.get(0);
-                    double tY = trans.get(1);
-                    double tZ = trans.get(2);
-
-                    double rX = rot.firstAngle;
-                    double rY = rot.secondAngle;
-                    double rZ = rot.thirdAngle;
-                }
-            else {
-                telemetry.addData("VuMark", "not visible");
-            }
-
-            telemetry.update();
-        }
+        vuforia.loop();
 
         double heading = orientationSensor.getOrientation();
         double heading2 = orientationSensor.getOrientation();
 
         double distance = rangeSensor.getDistance(DistanceUnit.CM);
+
+        keyColumn = vuforia.getKeyColumn();
 
         switch (state) {
 
@@ -205,39 +158,35 @@ public class Autonomous extends OpMode {
                 break;
             case TOP_FIELD:
                     if (redTeam == true) {
-                        if (vuMark == RelicRecoveryVuMark.CENTER || vuMark == RelicRecoveryVuMark.LEFT || vuMark == RelicRecoveryVuMark.RIGHT) {
+                        //if (vuMark == RelicRecoveryVuMark.CENTER || vuMark == RelicRecoveryVuMark.LEFT || vuMark == RelicRecoveryVuMark.RIGHT) {
                             move(-1,0,0);
                         if (distance < 20) {
                             move(0, 0, 0);
                             state = State.COLUMN_COUNTING;
                         }
-                        }
+                        //}
                     } else if (redTeam == false) {
-                        if (vuMark == RelicRecoveryVuMark.CENTER || vuMark == RelicRecoveryVuMark.LEFT || vuMark == RelicRecoveryVuMark.RIGHT) {
+                        //if (vuMark == RelicRecoveryVuMark.CENTER || vuMark == RelicRecoveryVuMark.LEFT || vuMark == RelicRecoveryVuMark.RIGHT) {
                             move(1,0,0);
                             if (distance < 20) {
                                 move(0, 0, 0);
                                 state = State.COLUMN_COUNTING;
                             }
                         }
-                    }
+                    //}
                 break;
             case BOTTOM_FIELD:
-                if (vuMark == RelicRecoveryVuMark.CENTER || vuMark == RelicRecoveryVuMark.LEFT || vuMark == RelicRecoveryVuMark.RIGHT) {
+                //if (vuMark == RelicRecoveryVuMark.CENTER || vuMark == RelicRecoveryVuMark.LEFT || vuMark == RelicRecoveryVuMark.RIGHT) {
                     move(1, 0, 0);
                     if (distance < 20) {
                         move(0, 0, 0);
                         state = State.COLUMN_COUNTING;
                     }
-                }
+                //}
                 break;
         }
         telemetry.addData("heading is: ", heading);
         telemetry.addData("second heading is: ", heading2);
-    }
-
-    String format(OpenGLMatrix transformationMatrix) {
-        return (transformationMatrix != null) ? transformationMatrix.formatAsTransform() : "null";
     }
 
     public void move(double x,double y,double direction){

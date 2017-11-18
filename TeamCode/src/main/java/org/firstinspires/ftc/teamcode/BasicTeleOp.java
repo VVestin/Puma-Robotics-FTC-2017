@@ -81,17 +81,17 @@ public class BasicTeleOp extends OpMode {
         motor3.setPower(0);
         motor4.setPower(0);
         if (gamepad1.left_trigger > 0.05) {
-            motor1.setPower(-gamepad1.left_trigger);
-            motor2.setPower(-gamepad1.left_trigger);
-            motor3.setPower(gamepad1.left_trigger);
-            motor4.setPower(gamepad1.left_trigger);
+            motor1.setPower(-gamepad1.left_trigger * gamepad1.left_trigger * gamepad1.left_trigger);
+            motor2.setPower(-gamepad1.left_trigger * gamepad1.left_trigger * gamepad1.left_trigger);
+            motor3.setPower(gamepad1.left_trigger * gamepad1.left_trigger * gamepad1.left_trigger);
+            motor4.setPower(gamepad1.left_trigger * gamepad1.left_trigger * gamepad1.left_trigger);
             return;
         }
         if (gamepad1.right_trigger > 0.05) {
-            motor1.setPower(gamepad1.right_trigger);
-            motor2.setPower(gamepad1.right_trigger);
-            motor3.setPower(-gamepad1.right_trigger);
-            motor4.setPower(-gamepad1.right_trigger);
+            motor1.setPower(gamepad1.right_trigger * gamepad1.right_trigger * gamepad1.right_trigger);
+            motor2.setPower(gamepad1.right_trigger * gamepad1.right_trigger * gamepad1.right_trigger);
+            motor3.setPower(-gamepad1.right_trigger * gamepad1.right_trigger * gamepad1.right_trigger);
+            motor4.setPower(-gamepad1.right_trigger * gamepad1.right_trigger * gamepad1.right_trigger);
             return;
         }
        // Equations:
@@ -99,8 +99,10 @@ public class BasicTeleOp extends OpMode {
        // y'=-xsin0+ycos0
         double rawx = gamepad1.right_stick_x;
         double rawy = gamepad1.right_stick_y;
-        double x = rawx * Math.cos(Math.toRadians(-heading)) - rawy * Math.sin(Math.toRadians(-heading));
-        double y = rawx * Math.sin(Math.toRadians(-heading)) + rawy * Math.cos(Math.toRadians(-heading));
+
+        double x = rawx * rawx * rawx;// rawx * Math.cos(Math.toRadians(-heading)) - rawy * Math.sin(Math.toRadians(-heading));
+        double y = rawy * rawy * rawy;// rawx * Math.sin(Math.toRadians(-heading)) + rawy * Math.cos(Math.toRadians(-heading));
+
         if (x != 0 || y != 0) {
             double n = ((x + y) / 2.0); // n is the power of the motors in the +x +y direction
             double m = -((x - y) / 2.0); // m is the power of the motors in the +x -y direction
@@ -111,11 +113,11 @@ public class BasicTeleOp extends OpMode {
         }
 
         lifter.setPower(0);
-        if (gamepad1.a) {
-            pos -= .01;
+        if (gamepad1.b) {
+            pos -= .05;
         }
-        if(gamepad1.b) {
-            pos += .01;
+        if(gamepad1.a) {
+            pos += .05;
         }
 
         s1.setPosition(pos);
