@@ -1,197 +1,182 @@
 package org.firstinspires.ftc.teamcode;
 
-import com.qualcomm.hardware.bosch.BNO055IMU;
 import com.qualcomm.hardware.modernrobotics.ModernRoboticsI2cRangeSensor;
 import com.qualcomm.robotcore.eventloop.opmode.OpMode;
+import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorSimple;
-import com.qualcomm.robotcore.hardware.HardwareMap;
 
-import org.firstinspires.ftc.robotcore.external.ClassFactory;
-import org.firstinspires.ftc.robotcore.external.matrices.OpenGLMatrix;
-import org.firstinspires.ftc.robotcore.external.matrices.VectorF;
-import org.firstinspires.ftc.robotcore.external.navigation.Acceleration;
-import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
-import org.firstinspires.ftc.robotcore.external.navigation.AxesOrder;
-import org.firstinspires.ftc.robotcore.external.navigation.AxesReference;
 import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
-import org.firstinspires.ftc.robotcore.external.navigation.Orientation;
-import org.firstinspires.ftc.robotcore.external.navigation.RelicRecoveryVuMark;
-import org.firstinspires.ftc.robotcore.external.navigation.VuMarkInstanceId;
-import org.firstinspires.ftc.robotcore.external.navigation.VuforiaLocalizer;
-import org.firstinspires.ftc.robotcore.external.navigation.VuforiaTrackable;
-import org.firstinspires.ftc.robotcore.external.navigation.VuforiaTrackableDefaultListener;
-import org.firstinspires.ftc.robotcore.external.navigation.VuforiaTrackables;
 
-/**
- * Created by vvestin on 10/21/17.
- */
-@com.qualcomm.robotcore.eventloop.opmode.Autonomous(name = "Autonomous", group = "Auto")
+import java.util.Stack;
+@com.qualcomm.robotcore.eventloop.opmode.Autonomous(name = "Autonomous" , group = "AAAAAARP")
+public class Autonomous extends OpMode implements GameConstants {
 
-public class Autonomous extends OpMode {
+    public static final String TAG = "Vuforia VuMark Sample";
+    public static final String VUFORIA_KEY = "AdrNx7L/////AAAAGWscSRJwJ0For7OwbugY3F"
+            + "d0I3f+mAuH+BAHpz7UBuNJnU+QudRFM8gzxBh+mZcuiwi2TStZTxHuDQvVJHER5zuUmh7"
+            + "X6dr/7uEnPy+OBd72HjBc2gM+w7DNmcBhY8SmEgLRlzhI4dRCAmjADeVQd9c/vTTyqWSY"
+            + "dy7F2fE2eQbSoXKyKN1uFV6P6lN3NlHSazLOaniTLpAQQlbOwb9S2KxXy7PQK1ZBAmWMd"
+            + "Hb5jwAXaqz+HXMPBez6/7behYzk1eu4a/0hFZ6jWo9Khoc9MRrhmCac0SCzmNRjfD8Y9Q"
+            + "61EtWvmo+WlbyzFJUNsZbND80BXAKaOWXvCAsdCo58qGtmVr36Bau5iljOe5HBbvov";
 
-    private VuforiaHelper vuforia;
-
+    // Actuators
     private DcMotor motor1;
     private DcMotor motor2;
     private DcMotor motor3;
     private DcMotor motor4;
 
-    private State state;
-
-    private int keyColumn;
-    int objectCount;
-    boolean seeColumn = false;
-
-    //Changes
-    boolean redTeam = true;
-    boolean topField = false;
-
-    ModernRoboticsI2cRangeSensor rangeSensor;
-
+    // Sensors
+    private ModernRoboticsI2cRangeSensor rangeSensor;
     private OrientationSensor orientationSensor;
-    private OrientationSensor orientationSensor2;
+    private VuforiaHelper2 vuforia;
 
-    public void start () {
-        vuforia.start();
-    }
+    // State machine
+    private State state;
+    private Stack<State> nextStates;
+
+    // State machine variables
+    private double delay;
+    private double delayStart;
+
+    // Autonomous variables
+    private int objectCount;
+    private boolean seeColumn;
+    private int keyColumn;
+    private double walldistance;
+    private int numReadings;
 
     public void init() {
         motor1 = hardwareMap.dcMotor.get("w1");
-        motor2 = hardwareMap.dcMotor.get("w2");
-        motor3 = hardwareMap.dcMotor.get("w3");
-        motor4 = hardwareMap.dcMotor.get("w4");
-
+        motor1.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
         motor1.setDirection(DcMotorSimple.Direction.REVERSE);
+
+        motor2 = hardwareMap.dcMotor.get("w2");
+        motor2.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
         motor2.setDirection(DcMotorSimple.Direction.REVERSE);
+
+        motor3 = hardwareMap.dcMotor.get("w3");
+        motor3.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+
+        motor4 = hardwareMap.dcMotor.get("w4");
+        motor4.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
 
         rangeSensor = hardwareMap.get(ModernRoboticsI2cRangeSensor.class, "sensor_range");
 
         orientationSensor = new OrientationSensor(hardwareMap);
-        orientationSensor2 = new OrientationSensor(hardwareMap);
-
-        vuforia = new VuforiaHelper(hardwareMap);
 
         state = State.START;
+        nextStates = new Stack<State>();
+
+        vuforia = new VuforiaHelper2(hardwareMap);
+    }
+
+    public void start() {
+        vuforia.start();
     }
 
     public void loop() {
-
         vuforia.loop();
+        if (vuforia.getKeyColumn() != 0) {
+            keyColumn = vuforia.getKeyColumn();
+        }
 
         double heading = orientationSensor.getOrientation();
-        double heading2 = orientationSensor.getOrientation();
-
         double distance = rangeSensor.getDistance(DistanceUnit.CM);
 
-        keyColumn = vuforia.getKeyColumn();
+
+        if (distance > 200 || distance == 0) {
+            return;
+        }
+
+        telemetry.addData("range", distance);
 
         switch (state) {
-
             case START:
-                if (topField == true) {
+                if (TOP_FIELD) {
                     state = State.TOP_FIELD;
-                }
-                else if (topField == false) {
+                } else {
                     state = State.BOTTOM_FIELD;
                 }
                 break;
+            case TOP_FIELD:
+                state = State.COLUMN_COUNTING;
+                break;
+            case BOTTOM_FIELD:
+                move(0, 0.4, 0);
+                if (distance < 38) {
+                    move(0, 0, 0);
+                    state = State.START_COLUMN_COUNTING;
+                }
+                break;
+            case START_COLUMN_COUNTING:
+                walldistance += distance;
+                numReadings++;
+                if (numReadings == 5) {
+                    walldistance /= numReadings;
+                    telemetry.addData("Wall Distance", walldistance);
+                    state = State.COLUMN_COUNTING;
+                }
+                break;
             case COLUMN_COUNTING:
-                //Oriented with sensor facing Cryptobox
-                if (redTeam == true) {
-                    move(-1,0,0);
+                // Oriented with sensor facing Cryptobox
+                if (RED_TEAM) {
+                    move(-.4, 0, 0);
+                } else {
+                    move(.4, 0, 0);
                 }
-                if (redTeam == false) {
-                    move(1,0,0);
-                }
-                if (distance > 200) {
-                    return;
-                }
-                if (distance < 10 && seeColumn == false) {
+
+                if (distance < walldistance - 2 && !seeColumn) {
                     seeColumn = true;
                 }
-                if (distance > 12 && seeColumn == true) {
+                if (distance > walldistance - 1 && seeColumn) {
                     seeColumn = false;
                     objectCount++;
                 }
-                if(keyColumn == 1){
-                    if (objectCount == 1) {
-                        state=State.STOP;
-                    }
-                    else if(redTeam==true){
-                        move(1,0,0);
-                    }
-                    else {
-                        move(-1,0,0);
-                    }
-                }
-                if(keyColumn == 2){
-                    if (objectCount == 2) {
-                        state=State.STOP;
-                    }
-                    else if(redTeam==true){
-                        move(1,0,0);
-                    }
-                    else {
-                        move (-1,0,0);
-                    }
-                }
-                if(keyColumn == 3){
-                    if (objectCount == 3) {
-                        state=State.STOP;
-                    }
-                    else if(redTeam==true){
-                        move(1,0,0);
-                    }
-                    else {
-                        move (-1,0,0);
-                    }
-                }
+
                 telemetry.addData("Current distance is ", distance);
                 telemetry.addData("Objects passed: ", objectCount);
-                if(keyColumn==objectCount){
-                    state=State.STOP;
+                if (keyColumn == objectCount) {
+                    if (RED_TEAM) {
+                        move(.4, 0, 0);
+                    } else {
+                        move(-.4, 0, 0);
+                    }
+                    delay = 0.7;
+                    nextStates.push(State.PUSH_GLYPH_IN);
+                    state = State.DELAY;
                 }
                 break;
+            case PUSH_GLYPH_IN:
+                move(0, 0.4, 0);
+                delay = 0.8;
+                nextStates.push(State.STOP);
+                state = State.DELAY;
+                break;
+            case DELAY:
+                delayStart = time;
+                state = State.DELAY_LOOP;
+                break;
+            case DELAY_LOOP:
+                if (time > delayStart + delay)
+                    state = nextStates.pop();
+                break;
             case STOP:
-               move(0, 0, 0);
-                break;
-            case TOP_FIELD:
-                    if (redTeam == true) {
-                        //if (vuMark == RelicRecoveryVuMark.CENTER || vuMark == RelicRecoveryVuMark.LEFT || vuMark == RelicRecoveryVuMark.RIGHT) {
-                            move(-1,0,0);
-                        if (distance < 20) {
-                            move(0, 0, 0);
-                            state = State.COLUMN_COUNTING;
-                        }
-                        //}
-                    } else if (redTeam == false) {
-                        //if (vuMark == RelicRecoveryVuMark.CENTER || vuMark == RelicRecoveryVuMark.LEFT || vuMark == RelicRecoveryVuMark.RIGHT) {
-                            move(1,0,0);
-                            if (distance < 20) {
-                                move(0, 0, 0);
-                                state = State.COLUMN_COUNTING;
-                            }
-                        }
-                    //}
-                break;
-            case BOTTOM_FIELD:
-                //if (vuMark == RelicRecoveryVuMark.CENTER || vuMark == RelicRecoveryVuMark.LEFT || vuMark == RelicRecoveryVuMark.RIGHT) {
-                    move(1, 0, 0);
-                    if (distance < 20) {
-                        move(0, 0, 0);
-                        state = State.COLUMN_COUNTING;
-                    }
-                //}
+                move(0, 0, 0);
                 break;
         }
-        telemetry.addData("heading is: ", heading);
-        telemetry.addData("second heading is: ", heading2);
+        telemetry.addData("State", state);
     }
 
-    public void move(double x,double y,double direction){
-        direction=motor3.getCurrentPosition() + motor4.getCurrentPosition() - motor1.getCurrentPosition() - motor2.getCurrentPosition();
-        x=motor1.getCurrentPosition() + motor2.getCurrentPosition() + motor3.getCurrentPosition() + motor4.getCurrentPosition();
-        y=motor1.getCurrentPosition() + motor2.getCurrentPosition() - motor3.getCurrentPosition() + motor4.getCurrentPosition();
+    // double x = gamepad1.right_stick_x;
+    // double y = gamepad1.right_stick_y;
+    // double dir = gamepad1.right_trigger or gamepad1.left_trigger;
+    public void move(double x, double y, double dir) {
+        double n = ((x + y) / 2.0); // n is the power of the motors in the +x +y direction
+        double m = ((x - y) / 2.0); // m is the power of the motors in the +x -y direction
+        motor1.setPower(m);
+        motor2.setPower(n);
+        motor3.setPower(m);
+        motor4.setPower(n);
     }
 }
