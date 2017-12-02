@@ -62,20 +62,20 @@ public class BasicTeleOp extends OpMode {
     @Override
     public void loop() {
         double heading = orientationSensor.getOrientation();
-        if (gamepad1.a) {
+        if (gamepad1.a || gamepad2.a) {
             pos -= .03;
         }
-        if(gamepad1.b) {
+        if(gamepad1.b ||gamepad2.b) {
             pos += .03;
         }
         s1.setPosition(pos);
         s2.setPosition(1 - pos);
 
         lifter.setPower(0);
-        if(gamepad1.dpad_up){
+        if(gamepad1.dpad_up || gamepad2.dpad_up){
             lifter.setPower(.5);
         }
-        if(gamepad1.dpad_down){
+        if(gamepad1.dpad_down || gamepad2.dpad_down){
             lifter.setPower(-.5);
         }
 
@@ -83,18 +83,21 @@ public class BasicTeleOp extends OpMode {
         motor2.setPower(0);
         motor3.setPower(0);
         motor4.setPower(0);
-        if (gamepad1.left_trigger > 0.05) {
-            motor1.setPower(-Math.pow(gamepad1.left_trigger, 5));
-            motor2.setPower(-Math.pow(gamepad1.left_trigger, 5));
-            motor3.setPower(Math.pow(gamepad1.left_trigger, 5));
-            motor4.setPower(Math.pow(gamepad1.left_trigger, 5));
+        if (gamepad1.left_trigger > 0.05 || gamepad2.left_trigger > 0.05) {
+            double trigger = Math.max(gamepad1.left_trigger, gamepad2.left_trigger);
+
+            motor1.setPower(-Math.pow(trigger, 5));
+            motor2.setPower(-Math.pow(trigger, 5));
+            motor3.setPower(Math.pow(trigger, 5));
+            motor4.setPower(Math.pow(trigger, 5));
             return;
         }
-        if (gamepad1.right_trigger > 0.05) {
-            motor1.setPower(Math.pow(gamepad1.right_trigger, 5));
-            motor2.setPower(Math.pow(gamepad1.right_trigger, 5));
-            motor3.setPower(-Math.pow(gamepad1.right_trigger, 5));
-            motor4.setPower(-Math.pow(gamepad1.right_trigger, 5));
+        if (gamepad1.right_trigger > 0.05 || gamepad2.right_trigger > 0.05) {
+            double trigger=Math.max(gamepad1.right_trigger, gamepad2.right_trigger);
+            motor1.setPower(Math.pow(trigger, 5));
+            motor2.setPower(Math.pow(trigger, 5));
+            motor3.setPower(-Math.pow(trigger, 5));
+            motor4.setPower(-Math.pow(trigger, 5));
             return;
         }
        // Equations:
@@ -102,6 +105,10 @@ public class BasicTeleOp extends OpMode {
        // y'=-xsin0+ycos0
         double rawx = gamepad1.right_stick_x;
         double rawy = -gamepad1.right_stick_y;
+        if(rawx==0 && rawy==0){
+            rawx=gamepad2.right_stick_x;
+            rawy= -gamepad1.right_stick_y;
+        }
 
         double x = Math.pow(rawx, 7);// rawx * Math.cos(Math.toRadians(-heading)) - rawy * Math.sin(Math.toRadians(-heading));
         double y = Math.pow(rawy, 7);// rawx * Math.sin(Math.toRadians(-heading)) + rawy * Math.cos(Math.toRadians(-heading));
@@ -118,19 +125,19 @@ public class BasicTeleOp extends OpMode {
         }
 
         lifter.setPower(0);
-        if (gamepad1.b && pos > .2) {
+        if ((gamepad1.b && pos > .2) || (gamepad2.b && pos>0.2)) {
             pos -= .05;
         }
-        if(gamepad1.a && pos < 1) {
+        if((gamepad1.a && pos < 1) || (gamepad2.a && pos<1)) {
             pos += .05;
         }
 
         s1.setPosition(pos);
         s2.setPosition(1 - pos);
-        if(gamepad1.dpad_up){
+        if(gamepad1.dpad_up || gamepad2.dpad_up){
             lifter.setPower(.5);
         }
-        if(gamepad1.dpad_down){
+        if(gamepad1.dpad_down || gamepad2.dpad_down){
             lifter.setPower(-.5);
         }
 

@@ -136,13 +136,15 @@ public class Autonomous extends OpMode implements GameConstants {
                 if (numReadings == 5) {
                     walldistance /= numReadings;
                     telemetry.addData("Wall Distance", walldistance);
-                    state = State.COLUMN_COUNTING;
+                    state = State.DELAY;
+                    USpivot.setPosition(0.35);
+                    nextStates.push(State.COLUMN_COUNTING);
                 }
                 break;
             case COLUMN_COUNTING:
                 // Oriented with sensor facing Cryptobox
                 USpivot.setPosition(0.35); // TODO Add a delay
-
+                delay= 0.5;
                 if (RED_TEAM) {
                     move(-SPEED, 0, 0);
                 } else {
@@ -163,7 +165,10 @@ public class Autonomous extends OpMode implements GameConstants {
                     delay = 0.7;
                     nextStates.push(State.PUSH_GLYPH_IN);
                     state = State.DELAY;
+                    break;
                 }
+                state = State.GET_DISTANCE;
+                nextStates.push(State.COLUMN_COUNTING);
                 break;
             case PUSH_GLYPH_IN:
                 move(0, SPEED, 0);
@@ -186,7 +191,7 @@ public class Autonomous extends OpMode implements GameConstants {
                 distance=rangeSensor.getDistance(DistanceUnit.CM);
                 readingDistNum=2;
                 state=State.GET_DISTANCE_LOOP;
-                        break;
+                break;
             case GET_DISTANCE_LOOP:
                 double currentdist= rangeSensor.getDistance(DistanceUnit.CM);
                 if(currentdist >200 || currentdist==0){

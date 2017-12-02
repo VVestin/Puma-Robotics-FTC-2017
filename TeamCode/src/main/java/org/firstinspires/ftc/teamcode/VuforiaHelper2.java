@@ -3,7 +3,7 @@ package org.firstinspires.ftc.teamcode;
 import com.qualcomm.robotcore.hardware.HardwareMap;
 
 public class VuforiaHelper2 {
-    private static final int KEY_COLUMN = 2;
+    private static final int KEY_COLUMN = 1;
 
     public VuforiaHelper2(HardwareMap hardwareMap) { }
 
