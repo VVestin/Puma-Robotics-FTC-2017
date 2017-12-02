@@ -5,9 +5,12 @@ import com.qualcomm.robotcore.eventloop.opmode.OpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorSimple;
+import com.qualcomm.robotcore.hardware.Servo;
 
 import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
 
+import java.util.LinkedList;
+import java.util.List;
 import java.util.Stack;
 @com.qualcomm.robotcore.eventloop.opmode.Autonomous(name = "Autonomous" , group = "AAAAAARP")
 public class Autonomous extends OpMode implements GameConstants {
@@ -25,6 +28,9 @@ public class Autonomous extends OpMode implements GameConstants {
     private DcMotor motor2;
     private DcMotor motor3;
     private DcMotor motor4;
+
+    //Servo
+    private Servo USpivot;
 
     // Sensors
     private ModernRoboticsI2cRangeSensor rangeSensor;
@@ -45,6 +51,15 @@ public class Autonomous extends OpMode implements GameConstants {
     private int keyColumn;
     private double walldistance;
     private int numReadings;
+    private double distance=255;
+
+    private double prevdistance;
+    private List<Integer> readings;
+
+    private int readingDistNum;
+
+
+    public static final double SPEED = 0.2;
 
     public void init() {
         motor1 = hardwareMap.dcMotor.get("w1");
@@ -61,7 +76,7 @@ public class Autonomous extends OpMode implements GameConstants {
         motor4 = hardwareMap.dcMotor.get("w4");
         motor4.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
 
-        rangeSensor = hardwareMap.get(ModernRoboticsI2cRangeSensor.class, "sensor_range");
+        rangeSensor = hardwareMap.get(ModernRoboticsI2cRangeSensor.class, "range");
 
         orientationSensor = new OrientationSensor(hardwareMap);
 
@@ -69,10 +84,18 @@ public class Autonomous extends OpMode implements GameConstants {
         nextStates = new Stack<State>();
 
         vuforia = new VuforiaHelper2(hardwareMap);
+
+        USpivot= hardwareMap.servo.get("usp");
+        USpivot.setPosition(1);
+
+        readings=new LinkedList<Integer>();
+
     }
 
     public void start() {
         vuforia.start();
+
+        USpivot.setPosition(0.5);
     }
 
     public void loop() {
@@ -82,12 +105,6 @@ public class Autonomous extends OpMode implements GameConstants {
         }
 
         double heading = orientationSensor.getOrientation();
-        double distance = rangeSensor.getDistance(DistanceUnit.CM);
-
-
-        if (distance > 200 || distance == 0) {
-            return;
-        }
 
         telemetry.addData("range", distance);
 
@@ -103,10 +120,14 @@ public class Autonomous extends OpMode implements GameConstants {
                 state = State.COLUMN_COUNTING;
                 break;
             case BOTTOM_FIELD:
-                move(0, 0.4, 0);
+                move(0, SPEED, 0);
                 if (distance < 38) {
                     move(0, 0, 0);
                     state = State.START_COLUMN_COUNTING;
+                }
+                else {
+                    state = State.GET_DISTANCE;
+                    state = nextStates.push(State.BOTTOM_FIELD);
                 }
                 break;
             case START_COLUMN_COUNTING:
@@ -120,35 +141,32 @@ public class Autonomous extends OpMode implements GameConstants {
                 break;
             case COLUMN_COUNTING:
                 // Oriented with sensor facing Cryptobox
-                if (RED_TEAM) {
-                    move(-.4, 0, 0);
-                } else {
-                    move(.4, 0, 0);
-                }
+                USpivot.setPosition(0.35); // TODO Add a delay
 
-                if (distance < walldistance - 2 && !seeColumn) {
-                    seeColumn = true;
+                if (RED_TEAM) {
+                    move(-SPEED, 0, 0);
+                } else {
+                    move(SPEED, 0, 0);
                 }
-                if (distance > walldistance - 1 && seeColumn) {
-                    seeColumn = false;
-                    objectCount++;
+                readings.add((int) distance);
+                telemetry.addData("distance", rangeSensor.getDistance(DistanceUnit.CM));
+                if (distance >= prevdistance + 5) {
+                    objectCount += 1;
                 }
+                prevdistance = distance;
 
                 telemetry.addData("Current distance is ", distance);
                 telemetry.addData("Objects passed: ", objectCount);
                 if (keyColumn == objectCount) {
-                    if (RED_TEAM) {
-                        move(.4, 0, 0);
-                    } else {
-                        move(-.4, 0, 0);
-                    }
+                    telemetry.addData("Readings:", readings);
+                    move(0, 0, 0);
                     delay = 0.7;
                     nextStates.push(State.PUSH_GLYPH_IN);
                     state = State.DELAY;
                 }
                 break;
             case PUSH_GLYPH_IN:
-                move(0, 0.4, 0);
+                move(0, SPEED, 0);
                 delay = 0.8;
                 nextStates.push(State.STOP);
                 state = State.DELAY;
@@ -164,7 +182,26 @@ public class Autonomous extends OpMode implements GameConstants {
             case STOP:
                 move(0, 0, 0);
                 break;
+            case GET_DISTANCE:
+                distance=rangeSensor.getDistance(DistanceUnit.CM);
+                readingDistNum=2;
+                state=State.GET_DISTANCE_LOOP;
+                        break;
+            case GET_DISTANCE_LOOP:
+                double currentdist= rangeSensor.getDistance(DistanceUnit.CM);
+                if(currentdist >200 || currentdist==0){
+                    return;
+                }
+                readingDistNum--;
+                if(currentdist < distance ) {
+                distance=currentdist;
+                }
+                if (readingDistNum==0){
+                  state=nextStates.pop();
+                }
+                break;
         }
+
         telemetry.addData("State", state);
     }
 
@@ -172,11 +209,14 @@ public class Autonomous extends OpMode implements GameConstants {
     // double y = gamepad1.right_stick_y;
     // double dir = gamepad1.right_trigger or gamepad1.left_trigger;
     public void move(double x, double y, double dir) {
-        double n = ((x + y) / 2.0); // n is the power of the motors in the +x +y direction
-        double m = ((x - y) / 2.0); // m is the power of the motors in the +x -y direction
+        double n = ((x + y) / Math.sqrt(2.0)); // n is the power of the motors in the +x +y direction
+        double m = ((x - y) / Math.sqrt(2.0)); // m is the power of the motors in the +x -y direction
         motor1.setPower(m);
         motor2.setPower(n);
         motor3.setPower(m);
         motor4.setPower(n);
+
+        telemetry.addData("m: ", m);
+        telemetry.addData("n: ", n);
     }
 }

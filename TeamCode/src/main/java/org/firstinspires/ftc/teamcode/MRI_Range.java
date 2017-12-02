@@ -36,6 +36,8 @@ import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 
 import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
 
+import java.util.List;
+
 /**
  * {@link SensorMRRangeSensor} illustrates how to use the Modern Robotics
  * Range Sensor.
@@ -50,7 +52,6 @@ import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
 @Autonomous(name = "Sensor: MR range sensor", group = "Sensor")
 //@Disabled   // comment out or remove this line to enable this opmode
 public class MRI_Range extends LinearOpMode {
-
     ModernRoboticsI2cRangeSensor rangeSensor;
 
     @Override public void runOpMode() {
@@ -62,6 +63,7 @@ public class MRI_Range extends LinearOpMode {
         waitForStart();
 
         while (opModeIsActive()) {
+
             telemetry.addData("raw ultrasonic", rangeSensor.rawUltrasonic());
             telemetry.addData("raw optical", rangeSensor.rawOptical());
             telemetry.addData("cm optical", "%.2f cm", rangeSensor.cmOptical());

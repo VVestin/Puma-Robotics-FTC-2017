@@ -18,9 +18,18 @@ public class IndivMotorTest extends OpMode {
     @Override
     public void init() {
         motor1 = hardwareMap.dcMotor.get("w1");
+        motor1.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+        motor1.setDirection(DcMotorSimple.Direction.REVERSE);
+
         motor2 = hardwareMap.dcMotor.get("w2");
+        motor2.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+        motor2.setDirection(DcMotorSimple.Direction.REVERSE);
+
         motor3 = hardwareMap.dcMotor.get("w3");
+        motor3.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+
         motor4 = hardwareMap.dcMotor.get("w4");
+        motor4.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
 
         motor1.setDirection(DcMotorSimple.Direction.REVERSE);
         motor2.setDirection(DcMotorSimple.Direction.REVERSE);
@@ -33,16 +42,20 @@ public class IndivMotorTest extends OpMode {
         motor3.setPower(0);
         motor4.setPower(0);
         if(gamepad1.a){
-            motor1.setPower(1);
+            motor1.setPower(.5);
         }
         if(gamepad1.b){
-            motor2.setPower(1);
+            motor2.setPower(.5);
         }
         if(gamepad1.x){
-            motor3.setPower(1);
+            motor3.setPower(.5);
         }
         if(gamepad1.y){
-            motor4.setPower(1);
+            motor4.setPower(.5);
         }
+        telemetry.addData("encoder 1: ", motor1.getCurrentPosition());
+        telemetry.addData("encoder 2: ", motor2.getCurrentPosition());
+        telemetry.addData("encoder 3: ", motor3.getCurrentPosition());
+        telemetry.addData("encoder 4: ", motor4.getCurrentPosition());
     }
 }

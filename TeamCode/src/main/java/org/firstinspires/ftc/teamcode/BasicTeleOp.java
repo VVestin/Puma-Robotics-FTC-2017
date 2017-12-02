@@ -55,6 +55,8 @@ public class BasicTeleOp extends OpMode {
         s2 = hardwareMap.servo.get("s2");
 
         orientationSensor = new OrientationSensor(hardwareMap);
+
+
     }
 
     @Override
@@ -105,8 +107,8 @@ public class BasicTeleOp extends OpMode {
         double y = Math.pow(rawy, 7);// rawx * Math.sin(Math.toRadians(-heading)) + rawy * Math.cos(Math.toRadians(-heading));
 
         if (x != 0 || y != 0) {
-            double n = ((x + y) / 2.0); // n is the power of the motors in the +x +y direction
-            double m = ((x - y) / 2.0); // m is the power of the motors in the +x -y direction
+            double n = ((x + y) / Math.sqrt(2.0)); // n is the power of the motors in the +x +y direction
+            double m = ((x - y) / Math.sqrt(2.0)); // m is the power of the motors in the +x -y direction
             motor1.setPower(m);
             motor2.setPower(n);
             motor3.setPower(m);
