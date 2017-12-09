@@ -126,10 +126,10 @@ public class BasicTeleOp extends OpMode {
 
         lifter.setPower(0);
         if ((gamepad1.b && pos > .2) || (gamepad2.b && pos>0.2)) {
-            pos -= .05;
+            pos -= .1;
         }
         if((gamepad1.a && pos < 1) || (gamepad2.a && pos<1)) {
-            pos += .05;
+            pos += .1;
         }
 
         s1.setPosition(pos);
