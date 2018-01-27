@@ -3,6 +3,7 @@ package org.firstinspires.ftc.teamcode;
 import com.qualcomm.hardware.modernrobotics.ModernRoboticsI2cRangeSensor;
 import com.qualcomm.robotcore.eventloop.opmode.OpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
+import com.qualcomm.robotcore.hardware.ColorSensor;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorSimple;
 import com.qualcomm.robotcore.hardware.Servo;
@@ -15,15 +16,6 @@ import java.util.Queue;
 import java.util.Stack;
 @com.qualcomm.robotcore.eventloop.opmode.Autonomous(name = "Autonomous" , group = "AAAAAARP")
 public class Autonomous extends OpMode implements GameConstants {
-
-    public static final String TAG = "Vuforia VuMark Sample";
-    public static final String VUFORIA_KEY = "AdrNx7L/////AAAAGWscSRJwJ0For7OwbugY3F"
-            + "d0I3f+mAuH+BAHpz7UBuNJnU+QudRFM8gzxBh+mZcuiwi2TStZTxHuDQvVJHER5zuUmh7"
-            + "X6dr/7uEnPy+OBd72HjBc2gM+w7DNmcBhY8SmEgLRlzhI4dRCAmjADeVQd9c/vTTyqWSY"
-            + "dy7F2fE2eQbSoXKyKN1uFV6P6lN3NlHSazLOaniTLpAQQlbOwb9S2KxXy7PQK1ZBAmWMd"
-            + "Hb5jwAXaqz+HXMPBez6/7behYzk1eu4a/0hFZ6jWo9Khoc9MRrhmCac0SCzmNRjfD8Y9Q"
-            + "61EtWvmo+WlbyzFJUNsZbND80BXAKaOWXvCAsdCo58qGtmVr36Bau5iljOe5HBbvov";
-
     // Actuators
     private DcMotor motor1;
     private DcMotor motor2;
@@ -35,10 +27,12 @@ public class Autonomous extends OpMode implements GameConstants {
     //Servo
     private Servo USpivot;
     private Servo s1, s2;
+    private Servo jewelKnocker;
 
     // Sensors
     private ModernRoboticsI2cRangeSensor rangeSensor;
     private OrientationSensor orientationSensor;
+    private ColorSensor jewelSensor;
     private VuforiaHelper vuforia;
 
     // State machine
@@ -53,6 +47,7 @@ public class Autonomous extends OpMode implements GameConstants {
     private Stack<Integer> readings;
     private static final int FILTER_BUFFER_LENGTH = 3;
     private Queue<Integer> distanceFilter;
+    private Queue<Integer> colorFilter;
 
     private int objectCount;
     private int keyColumn;
@@ -104,8 +99,12 @@ public class Autonomous extends OpMode implements GameConstants {
         USpivot = hardwareMap.servo.get("usp");
         USpivot.setPosition(1);
 
+        jewelKnocker = hardwareMap.servo.get("jewel");
+        jewelSensor = hardwareMap.colorSensor.get("jewelsensor");
+
         readings = new Stack<Integer>();
         distanceFilter = new LinkedList<Integer>();
+        colorFilter = new LinkedList<Integer>();
     }
 
     public void start() {
@@ -118,10 +117,7 @@ public class Autonomous extends OpMode implements GameConstants {
         if (keyColumn == 0) {
             vuforia.loop();
             keyColumn = vuforia.getKeyColumn();
-            if (keyColumn == 0)
-                return;
         }
-
         double heading = orientationSensor.getOrientation();
         telemetry.addData("heading", heading);
 
@@ -129,28 +125,76 @@ public class Autonomous extends OpMode implements GameConstants {
             case START:
                 s1.setPosition(0.25);
                 s2.setPosition(0.75);
+                jewelKnocker.setPosition(.735);
 
                 extender.setPower(0.3);
 
                 delay = 1;
-                state=State.DELAY;
+                state = State.DELAY;
+                nextStates.push(State.SENSE_JEWEL);
+                break;
+            case SENSE_JEWEL:
+                extender.setPower(0);
 
-                if (TOP_FIELD) {
-                    nextStates.push(State.TOP_FIELD);
+                int colorDistance = jewelSensor.blue() - jewelSensor.red();
+                colorFilter.add(colorDistance);
+                if (colorFilter.size() <= 5)
+                    break;
+
+                colorFilter.remove();
+                int avgDifference = 0;
+                for (int colorDiff : colorFilter) {
+                    avgDifference += colorDiff;
+                }
+                avgDifference /= colorFilter.size();
+
+                if (avgDifference >= 5) { // Blue color is at least 5 greater than red.
+                    if (RED_TEAM)
+                        state = State.KNOCK_JEWEL_FORWARD;
+                    else
+                        state = State.KNOCK_JEWEL_BACKWARD;
+                } else if (avgDifference <= -5) { // Red color is at least 5 greater than blue
+                    if (RED_TEAM)
+                        state = State.KNOCK_JEWEL_BACKWARD;
+                    else
+                        state = State.KNOCK_JEWEL_FORWARD;
                 } else {
-                    nextStates.push(State.BOTTOM_FIELD);
-                    motor1.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
-                    motor2.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
-                    motor3.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
-                    motor4.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
+                    break;
+                }
+                if (JEWEL_ONLY) {
+                    nextStates.push(State.STOP);
+                } else {
+                    if (TOP_FIELD) {
+                        nextStates.push(State.TOP_FIELD);
+                    } else {
+                        nextStates.push(State.BOTTOM_FIELD);
+                    }
+                    nextStates.push(State.STRAIGHTEN);
                 }
                 break;
+            case KNOCK_JEWEL_FORWARD:
+                move(0, 0, -.1);
+                state = State.DELAY;
+                delay = 1;
+                break;
+            case KNOCK_JEWEL_BACKWARD:
+                move(0, 0, .1);
+                state = State.DELAY;
+                delay = 1;
+                break;
             case TOP_FIELD:
-                extender.setPower(0);
+                jewelKnocker.setPosition(.147);
                 state = State.START_COLUMN_COUNTING;
                 break;
             case BOTTOM_FIELD:
-                extender.setPower(0);
+                jewelKnocker.setPosition(.147);
+                if (keyColumn == 0) {
+                    break;
+                }
+                motor1.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
+                motor2.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
+                motor3.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
+                motor4.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
                 move(0, SPEED + 0.1, 0);
                 lifter.setPower(1);
                 delay = 1.8;
@@ -206,10 +250,11 @@ public class Autonomous extends OpMode implements GameConstants {
                     move(0, 0, 0);
                     state = State.DELAY;
                     delay = 1;
-                    nextStates.push(State.BOTTOM_FIELD_STRAIGHTEN);
+                    nextStates.push(State.START_COLUMN_COUNTING);
+                    nextStates.push(State.STRAIGHTEN);
                 }
                 break;
-            case BOTTOM_FIELD_STRAIGHTEN:
+            case STRAIGHTEN:
                 if (heading < -5) {
                     move(0, 0, -.2);
                 } else if (heading > 5) {
@@ -217,8 +262,7 @@ public class Autonomous extends OpMode implements GameConstants {
                 } else {
                     move(0, 0, 0);
                     state = State.DELAY;
-                    delay = 1;
-                    nextStates.push(State.START_COLUMN_COUNTING);
+                    delay = .3;
                 }
                 break;
             case START_COLUMN_COUNTING:
@@ -247,7 +291,7 @@ public class Autonomous extends OpMode implements GameConstants {
                 distance = bufferTotal / FILTER_BUFFER_LENGTH;
                 // Oriented with sensor facing Cryptobox
                 if (RED_TEAM) {
-                    move(-SPEED, SPEED * Math.tan(Math.toRadians(7)), 0);
+                    move(-SPEED, SPEED * Math.tan(Math.toRadians(7)), 0); // 7 degree fudge factor
                 } else {
                     move(SPEED, SPEED * Math.tan(Math.toRadians(7)), 0);
                 }
@@ -258,7 +302,6 @@ public class Autonomous extends OpMode implements GameConstants {
                     distBeforeIncrease = distance;
                 }
                 prevdistance = distance;
-
 
                 if (keyColumn == objectCount) {
                     /*if (RED_TEAM) {
@@ -331,6 +374,7 @@ public class Autonomous extends OpMode implements GameConstants {
             case STOP:
                 telemetry.addData("readings", readings);
                 telemetry.addData("timings", times);
+                jewelKnocker.setPosition(.147);
                 move(0, 0, 0);
                 break;
             case GET_DISTANCE:
@@ -340,7 +384,7 @@ public class Autonomous extends OpMode implements GameConstants {
                 break;
             case GET_DISTANCE_LOOP:
                 double currentdist= rangeSensor.getDistance(DistanceUnit.CM);
-                if(currentdist >200 || currentdist==0){
+                if(currentdist > 200 || currentdist == 0){
                     return;
                 }
                 readingDistNum--;
@@ -363,12 +407,12 @@ public class Autonomous extends OpMode implements GameConstants {
     // double y = gamepad1.right_stick_y;
     // double dir = gamepad1.right_trigger or gamepad1.left_trigger;
     public void move(double x, double y, double dir) {
-        if (dir != 0) {
+        if (dir != 0) { // Rotating
             motor1.setPower(dir);
             motor2.setPower(dir);
             motor3.setPower(-dir);
             motor4.setPower(-dir);
-        } else {
+        } else { // Translating
             double n = ((x + y) / Math.sqrt(2.0)); // n is the power of the motors in the +x +y direction
             double m = ((x - y) / Math.sqrt(2.0)); // m is the power of the motors in the +x -y direction
             motor1.setPower(m);

@@ -5,5 +5,6 @@ public interface GameConstants {
 
     // Autonomous parameters
     public static final boolean TOP_FIELD = false;
+    public static final boolean JEWEL_ONLY = true;
     //public static final double SLOW_SPEED = .1;
 }

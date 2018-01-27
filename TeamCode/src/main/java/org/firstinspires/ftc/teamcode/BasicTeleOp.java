@@ -25,7 +25,7 @@ public class BasicTeleOp extends OpMode {
     private OrientationSensor orientationSensor;
     private ColorSensor jewelSensor;
 
-    private double pos = 1;
+    private double pos = .7;
     private double pivotPos = .38;
     private double clawPos = .5;
     private double jewelBarPos = 0.24;
@@ -34,24 +34,24 @@ public class BasicTeleOp extends OpMode {
     private Servo USpivot;
     private Servo relicClaw;
     private Servo relicPivot;
-    private Servo jewelBar;
+    private Servo jewelKnocker;
     private DcMotor extender;
 
     @Override
     public void init() {
         motor1 = hardwareMap.dcMotor.get("w1");
-        motor1.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+        motor1.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
         motor1.setDirection(DcMotorSimple.Direction.REVERSE);
 
         motor2 = hardwareMap.dcMotor.get("w2");
-        motor2.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+        motor2.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
         motor2.setDirection(DcMotorSimple.Direction.REVERSE);
 
         motor3 = hardwareMap.dcMotor.get("w3");
-        motor3.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+        motor3.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
 
         motor4 = hardwareMap.dcMotor.get("w4");
-        motor4.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+        motor4.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
 
         lifter = hardwareMap.dcMotor.get("lift");
 
@@ -68,7 +68,7 @@ public class BasicTeleOp extends OpMode {
 
         USpivot= hardwareMap.servo.get("usp");
 
-        jewelBar = hardwareMap.servo.get("jewel");
+        jewelKnocker = hardwareMap.servo.get("jewel");
         jewelSensor = hardwareMap.colorSensor.get("jewelsensor");
 
         slow = false;
@@ -151,10 +151,10 @@ public class BasicTeleOp extends OpMode {
 
 
         if (gamepad2.right_bumper && pivotPos < .5) {
-            pivotPos += 0.016; // pivot down
+            pivotPos += 0.05; // pivot down
         }
         if (gamepad2.left_bumper && pivotPos > 0) {
-            pivotPos -= 0.016; // pivot up
+            pivotPos -= 0.05; // pivot up
         }
 
         if (gamepad2.y && clawPos < 0.5) {
@@ -171,14 +171,14 @@ public class BasicTeleOp extends OpMode {
             extender.setPower(0);
         }
         if (gamepad1.dpad_left) {
-            jewelBarPos = .24;
+            jewelBarPos = .146;
         } else if (gamepad1.dpad_right) {
-            jewelBarPos = .75;
+            jewelBarPos = .717;
         }
 
         telemetry.addData("red", jewelSensor.red());
         telemetry.addData("jewelBar", jewelBarPos);
-        jewelBar.setPosition(jewelBarPos);
+        jewelKnocker.setPosition(jewelBarPos);
 
         telemetry.addData("pivotPos is: ", pivotPos);
         telemetry.addData("clawPos is: ", clawPos);
